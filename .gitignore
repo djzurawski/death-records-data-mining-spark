@@ -1,6 +1,9 @@
 *.class
 *.log
 
+#ignore data directory
+data/
+
 # sbt specific
 .cache
 .history
