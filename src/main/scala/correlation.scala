@@ -7,6 +7,8 @@ import org.apache.spark.SparkConf
 import org.apache.log4j.Logger
 import org.apache.log4j.Level
 
+import edu.colorado.cs.datamining.utils._
+
 object Correlation {
 
   var headerMap: Map[String, Int] = Map()
@@ -36,7 +38,7 @@ object Correlation {
     "chinese" -> (4, (6, 9)),
     "japanese" -> (5, (6, 9)))
 
-    /* Opens header csv and returns map of (name, column #) */
+    /* Opens header csv and returns map of (name, column #) 
   def mapHeaderIndexes(headerFileName: String) : Map[String, Int] = {
     val header = scala.io.Source.fromFile(headerFileName).mkString
     var headerMap: Map[String, Int] = Map()
@@ -44,6 +46,7 @@ object Correlation {
 
     return headerMap
   }
+  */
 
   def checkMatch(entry : Array[String], feature : Array[String]) : Boolean = {
 
