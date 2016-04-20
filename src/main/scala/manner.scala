@@ -112,6 +112,8 @@ object ByManner {
       println("%d, %f : %d %d".format(bin.toInt, filtered/total.toDouble, filtered, total))
     }
     println()
+
+    sc.stop()
     
   }
 
@@ -152,6 +154,9 @@ object ByManner {
       //println(bin + ", " + filtered.toDouble/total.toDouble)
     }
     println()
+
+    sc.stop()
+    
   }
 
 
