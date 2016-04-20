@@ -54,7 +54,7 @@ object CorrelationCollege {
     //return false
 
     // Race
-    val raceRangeTuples = raceRange(feature(2))
+    val raceRangeTuples = raceRange(feature(1))
     val raceType = entry.race
     val hispanicOrigin = entry.hispanicCode
 
@@ -72,11 +72,11 @@ object CorrelationCollege {
       eduCode = entry.edu1989
     }
 
-    val eduRangeTuple = eduMap(feature(3))
+    val eduRangeTuple = eduMap(feature(2))
     val eduMatch = eduCode >= eduRangeTuple._1 && eduCode <= eduRangeTuple._2
 
     // Sex
-    val sexMatch = entry.sex == feature(4)
+    val sexMatch = entry.sex == feature(3)
 
     return raceMatch && eduMatch & sexMatch
   }
@@ -87,7 +87,6 @@ object CorrelationCollege {
 
 
   def conditionalProbability(dataFile: String,
-                             headerFile: String,
                              featureFile: String,
                              cause: String) {
 
@@ -97,7 +96,6 @@ object CorrelationCollege {
     val sc = new SparkContext(conf)
 
     val dataRDD = sc.textFile(dataFile)
-    headerMap  = mapHeaderIndexes(headerFile)
     println(featureFile)
     val features = Source.fromFile(featureFile).mkString.split("\n")
     val collegeEntries = dataRDD.map(line => lineToEntry(line, collegeHeaderMap)).cache()    
@@ -119,8 +117,7 @@ object CorrelationCollege {
 
       println("numFeature = %d numFeatureAndCause = %d".format(numFeature, numFeatureAndCause))
       println("Cond Prob = %f\n".format(numFeatureAndCause/numFeature.toDouble))
-    }
-    
+    }    
 
     sc.stop()
   }
@@ -134,10 +131,9 @@ object CorrelationCollege {
     Logger.getLogger("akka").setLevel(Level.OFF)
 
     val dataFile: String = args(0)
-    val headerFile: String = args(1)
-    val featureFile: String = args(2)
+    val featureFile: String = args(1)
 
     
-    conditionalProbability(dataFile, headerFile, featureFile, "3")
+    conditionalProbability(dataFile, featureFile, "3")
   }
 }
