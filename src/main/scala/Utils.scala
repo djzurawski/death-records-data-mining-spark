@@ -17,7 +17,7 @@ package object utils {
     manner: String,
     causeCode: String,
     causeBin352: Int,
-    caseBin113: Int,
+    causeBin113: Int,
     causeBin39: Int,
     race: Int,
     hispanicCode: Int)
