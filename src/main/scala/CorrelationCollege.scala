@@ -150,6 +150,44 @@ object CorrelationCollege {
     return numFeatureAndCause/numFeature.toDouble
   }
 
+  def fracByCause39(dataFile: String,
+                   featureFile: String,
+                   year: Int) {
+
+    val conf = new SparkConf().setAppName("Fract By Cause39")
+    val sc = new SparkContext(conf)
+
+    val dataRDD = sc.textFile(dataFile)
+    println(featureFile)
+    val features = Source.fromFile(featureFile).mkString.split("\n")
+    val collegeEntries = dataRDD.map(line => lineToEntry(line, collegeHeaderMap)).cache()
+
+
+    // for each feature
+    for (feature <- features) {
+      println(feature)
+
+      //filter entries by features
+
+      val featureMatches = collegeEntries.filter{line =>
+        checkMatch(line, feature.split(","))
+      }
+
+      //make tuples (cauesCode39, 1)
+
+      val causeTuples = featureMatches.map(entry => (entry.causeBin39, 1))
+      // Reduce by key
+
+      val causeCounts = causeTuples.reduceByKey((a,b) => a + b)
+
+      causeCounts.collect().foreach{
+        case (causeBin39, count) => 
+          println("%d, %d".format(causeBin39, count))}
+
+    }
+
+  }
+
   def main(args: Array[String]) {
 
     //Turn off obnoxious logging
@@ -160,6 +198,7 @@ object CorrelationCollege {
     val featureFile: String = args(1)
 
     //conditionalProbability(dataFile, featureFile, "0")
-    conditionalProbability(dataFile, featureFile, "1", -1)
+    //conditionalProbability(dataFile, featureFile, "1", -1)
+   fracByCause39(dataFile, featureFile, -1)
   }
 }
