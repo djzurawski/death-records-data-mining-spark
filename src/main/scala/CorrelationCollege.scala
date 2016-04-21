@@ -1,4 +1,5 @@
 import scala.io.Source
+import java.io._
 
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
@@ -162,30 +163,75 @@ object CorrelationCollege {
     val features = Source.fromFile(featureFile).mkString.split("\n")
     val collegeEntries = dataRDD.map(line => lineToEntry(line, collegeHeaderMap)).cache()
 
+    // FileWriter
+    val file = new File("out.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+
 
     // for each feature
     for (feature <- features) {
       println(feature)
 
       //filter entries by features
-
       val featureMatches = collegeEntries.filter{line =>
         checkMatch(line, feature.split(","))
       }
 
       //make tuples (cauesCode39, 1)
-
       val causeTuples = featureMatches.map(entry => (entry.causeBin39, 1))
+      
       // Reduce by key
+      val causeCounts = causeTuples.reduceByKey((a,b) => a + b)
+      val sortedCauseCounts = causeCounts.sortByKey()
+
+      sortedCauseCounts.collect().foreach{
+        case (causeBin39, count) => 
+
+        bw.write("%d, %d\n".format(causeBin39, count))
+
+      }
+          //println("%d, %d".format(causeBin39, count))}
+    }
+        bw.close()
+
+  }
+
+  def fracByCause113(dataFile: String,
+                   featureFile: String,
+                   year: Int) {
+
+    val conf = new SparkConf().setAppName("Frac By Cause113")
+    val sc = new SparkContext(conf)
+
+    val dataRDD = sc.textFile(dataFile)
+    println(featureFile)
+    val features = Source.fromFile(featureFile).mkString.split("\n")
+    val collegeEntries = dataRDD.map(line => lineToEntry(line, collegeHeaderMap)).cache()
+
+    // FileWriter
+    val file = new File("out.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+
+    // for each feature
+    for (feature <- features) {
+      println(feature)
+
+      bw.write("%s\n".format(feature))
+
+      val featureMatches = collegeEntries.filter{line =>
+        checkMatch(line, feature.split(","))
+      }
+      val causeTuples = featureMatches.map(entry => (entry.causeBin113, 1))
 
       val causeCounts = causeTuples.reduceByKey((a,b) => a + b)
+      val sortedCauseCounts = causeCounts.sortByKey()
 
-      causeCounts.collect().foreach{
-        case (causeBin39, count) => 
-          println("%d, %d".format(causeBin39, count))}
-
+      sortedCauseCounts.collect().foreach{
+        case (cause, count) => 
+          bw.write("%d, %d\n".format(cause, count))
+      }
     }
-
+    bw.close()
   }
 
   def main(args: Array[String]) {
@@ -199,6 +245,6 @@ object CorrelationCollege {
 
     //conditionalProbability(dataFile, featureFile, "0")
     //conditionalProbability(dataFile, featureFile, "1", -1)
-   fracByCause39(dataFile, featureFile, -1)
+   fracByCause113(dataFile, featureFile, -1)
   }
 }
