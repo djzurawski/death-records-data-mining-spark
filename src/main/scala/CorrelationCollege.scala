@@ -3,6 +3,7 @@ import scala.io.Source
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 import org.apache.spark.SparkConf
+import org.apache.spark.rdd.RDD
 
 import org.apache.log4j.Logger
 import org.apache.log4j.Level
@@ -88,7 +89,8 @@ object CorrelationCollege {
 
   def conditionalProbability(dataFile: String,
                              featureFile: String,
-                             cause: String) {
+                             cause: String,
+                             year: Int) {
 
     println("in function")
 
@@ -98,31 +100,55 @@ object CorrelationCollege {
     val dataRDD = sc.textFile(dataFile)
     println(featureFile)
     val features = Source.fromFile(featureFile).mkString.split("\n")
-    val collegeEntries = dataRDD.map(line => lineToEntry(line, collegeHeaderMap)).cache()    
-
-
+    val collegeEntries = dataRDD.map(line => lineToEntry(line, collegeHeaderMap)).cache()
       
     for (feature <- features) {
-      println(feature)
-
+      //println(feature)
       //P(cause | demographic)
-      val numFeature = collegeEntries.filter{line =>
-        checkMatch(line, feature.split(","))
-      }.count()
+      //println("numFeature = %d numFeatureAndCause = %d".format(numFeature, numFeatureAndCause))
+      //println("Cond Prob = %f\n".format(numFeatureAndCause/numFeature.toDouble))
 
-      val numFeatureAndCause = collegeEntries.filter{line =>
-        checkMatch(line, feature.split(",")) &&
-        line.manner == cause
-      }.count()
-
-      println("numFeature = %d numFeatureAndCause = %d".format(numFeature, numFeatureAndCause))
-      println("Cond Prob = %f\n".format(numFeatureAndCause/numFeature.toDouble))
-    }    
-
+      if (year == -1) {
+        println(calcFrac(collegeEntries,feature, cause))
+      }
+      else {
+        println(calcFracByYear(collegeEntries,feature, cause, year))
+      }
+    }
     sc.stop()
   }
 
 
+  def calcFrac(entires: RDD[Entry], feature: String, cause: String): Double = {
+    //P(cause | demographic)
+    val numFeature = entires.filter{line =>
+      checkMatch(line, feature.split(","))
+    }.count()
+
+    val numFeatureAndCause = entires.filter{line =>
+      checkMatch(line, feature.split(",")) &&
+      line.manner == cause
+    }.count()
+
+    return numFeatureAndCause/numFeature.toDouble
+
+  }
+
+  def calcFracByYear(entires: RDD[Entry], feature: String, cause: String, year: Int): Double = {
+    //P(cause | demographic)
+    val numFeature = entires.filter{line =>
+      checkMatch(line, feature.split(",")) &&
+      line.year == year
+    }.count()
+
+    val numFeatureAndCause = entires.filter{line =>
+      checkMatch(line, feature.split(",")) &&
+      line.year == year &&
+      line.manner == cause
+    }.count()
+
+    return numFeatureAndCause/numFeature.toDouble
+  }
 
   def main(args: Array[String]) {
 
@@ -133,7 +159,7 @@ object CorrelationCollege {
     val dataFile: String = args(0)
     val featureFile: String = args(1)
 
-    
-    conditionalProbability(dataFile, featureFile, "3")
+    //conditionalProbability(dataFile, featureFile, "0")
+    conditionalProbability(dataFile, featureFile, "1", -1)
   }
 }
