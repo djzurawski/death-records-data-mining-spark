@@ -87,7 +87,7 @@ object CorrelationCollege {
     val dataRDD = sc.textFile(dataFile)
     println(featureFile)
     val features = Source.fromFile(featureFile).mkString.split("\n")
-    val collegeEntries = dataRDD.map(line => lineToEntry(line, collegeHeaderMap)).cache()
+    val entries = dataRDD.map(line => lineToEntry(line, collegeHeaderMap)).cache()
       
     for (feature <- features) {
       //println(feature)
@@ -95,46 +95,34 @@ object CorrelationCollege {
       //println("numFeature = %d numFeatureAndCause = %d".format(numFeature, numFeatureAndCause))
       //println("Cond Prob = %f\n".format(numFeatureAndCause/numFeature.toDouble))
 
-      if (year == -1) {
-        println(calcFrac(collegeEntries,feature, cause))
+      val fractionMatches = year match {
+        case -1 => {
+          val numFeature = entries.filter{line =>
+            checkMatch(line, feature.split(","))}.count()
+
+          val numFeatureAndCause = entries.filter{line =>
+            checkMatch(line, feature.split(",")) &&
+            line.manner == cause}.count()
+
+            numFeatureAndCause/numFeature.toDouble
+        }
+        case _ => {
+          val numFeature = entries.filter{line =>
+            checkMatch(line, feature.split(",")) &&
+            line.year == year}.count()
+
+          val numFeatureAndCause = entries.filter{line =>
+            checkMatch(line, feature.split(",")) &&
+            line.year == year &&
+            line.manner == cause}.count()
+
+            numFeatureAndCause/numFeature.toDouble
+        }
       }
-      else {
-        println(calcFracByYear(collegeEntries,feature, cause, year))
-      }
+      println(fractionMatches)
     }
+
     sc.stop()
-  }
-
-
-  def calcFrac(entires: RDD[Entry], feature: String, cause: String): Double = {
-    //P(cause | demographic)
-    val numFeature = entires.filter{line =>
-      checkMatch(line, feature.split(","))
-    }.count()
-
-    val numFeatureAndCause = entires.filter{line =>
-      checkMatch(line, feature.split(",")) &&
-      line.manner == cause
-    }.count()
-
-    return numFeatureAndCause/numFeature.toDouble
-
-  }
-
-  def calcFracByYear(entires: RDD[Entry], feature: String, cause: String, year: Int): Double = {
-    //P(cause | demographic)
-    val numFeature = entires.filter{line =>
-      checkMatch(line, feature.split(",")) &&
-      line.year == year
-    }.count()
-
-    val numFeatureAndCause = entires.filter{line =>
-      checkMatch(line, feature.split(",")) &&
-      line.year == year &&
-      line.manner == cause
-    }.count()
-
-    return numFeatureAndCause/numFeature.toDouble
   }
 
   def fracByCause(dataFile: String,
@@ -172,7 +160,7 @@ object CorrelationCollege {
         .sortByKey()
 
       println(feature)
-      
+
       bw.write("%s\n".format(feature))
       sortedCauseCounts.collect().foreach{case (causeBin, count) => 
         bw.write("%d, %d\n".format(causeBin, count))
@@ -191,7 +179,7 @@ object CorrelationCollege {
     val featureFile: String = args(1)
 
     //conditionalProbability(dataFile, featureFile, "0")
-    //conditionalProbability(dataFile, featureFile, "1", -1)
-   fracByCause(dataFile, featureFile, -1, 39)
+    conditionalProbability(dataFile, featureFile, "1", -1)
+   //fracByCause(dataFile, featureFile, -1, 39)
   }
 }
