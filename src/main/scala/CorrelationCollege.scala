@@ -125,12 +125,12 @@ object CorrelationCollege {
     sc.stop()
   }
 
-  def fracByCause(dataFile: String,
+  def countByCauseFeatures(dataFile: String,
                    featureFile: String,
                    year: Int,
                    binSize: Int) {
 
-    val conf = new SparkConf().setAppName("Fract By Cause39")
+    val conf = new SparkConf().setAppName("Count by cause bin %d".format(binSize))
     val sc = new SparkContext(conf)
 
     val dataRDD = sc.textFile(dataFile)
@@ -138,35 +138,109 @@ object CorrelationCollege {
     val entries = dataRDD.map(line => lineToEntry(line, collegeHeaderMap)).cache()
 
     // FileWriter
-    val file = new File("out.txt")
+    val file = new File("out.csv")
     val bw = new BufferedWriter(new FileWriter(file))
+    bw.write("binID, count, fraction\n")
 
     // for each feature
     for (feature <- features) {
 
-      val featureMatches = year match {
+      val yearMatches = year match {
         case -1 => entries.filter{checkMatch(_, feature.split(","))}
         case _  => entries.filter{entry => checkMatch(entry, feature.split(",")) && entry.year == year}
       }
 
+      val featureMatchCount = yearMatches.count()
+
       val causeTuples = binSize match {
-        case 39 => featureMatches.map(entry => (entry.causeBin39,1))
-        case 113 => featureMatches.map(entry => (entry.causeBin113,1))
-        case 352 => featureMatches.map(entry =>(entry.causeBin352,1))
+        case 39 => yearMatches.map(entry => (entry.causeBin39,1))
+        case 113 => yearMatches.map(entry => (entry.causeBin113,1))
+        case 352 => yearMatches.map(entry =>(entry.causeBin352,1))
       }
 
       val sortedCauseCounts = causeTuples
         .reduceByKey((a,b) => a + b)
-        .sortByKey()
+        .sortBy(_._2, false) //sort values descending      
 
       println(feature)
 
       bw.write("%s\n".format(feature))
       sortedCauseCounts.collect().foreach{case (causeBin, count) => 
-        bw.write("%d, %d\n".format(causeBin, count))
+        bw.write("%d, %d, %f\n".format(causeBin, count, count/featureMatchCount.toDouble))
       }       
     }
     bw.close()
+  }
+
+  def countByCause(dataFile: String,
+                   year: Int,
+                   binSize: Int,
+                   sc: SparkContext) {
+
+    //val conf = new SparkConf().setAppName("Count by cause bin %d".format(binSize))
+    //val sc = new SparkContext(conf)
+
+    val dataRDD = sc.textFile(dataFile)
+    val entries = dataRDD.map(line => lineToEntry(line, collegeHeaderMap)).cache()
+
+    // FileWriter
+    val file = new File("out%d.csv".format(year))
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write("binID, count, fraction\n")
+
+
+    val yearMatches = year match {
+      case -1 => entries.filter{entry => entry.sex == "M"}
+      case _  => entries.filter{entry =>
+        entry.year == year &&
+        entry.sex == "M"}
+    }
+
+    val yearMatchCount = yearMatches.count()
+
+    val causeTuples = binSize match {
+      case 39 => yearMatches.map(entry => (entry.causeBin39,1))
+      case 113 => yearMatches.map(entry => (entry.causeBin113,1))
+      case 352 => yearMatches.map(entry =>(entry.causeBin352,1))
+    }
+
+    val sortedCauseCounts = causeTuples
+      .reduceByKey((a,b) => a + b)
+      .sortBy(_._2, false) //sort values descending      
+
+    sortedCauseCounts.collect().foreach{case (causeBin, count) => 
+      bw.write("%d, %d, %f\n".format(causeBin, count, count/yearMatchCount.toDouble))
+    }       
+    bw.close()
+  }
+
+
+  def countByDayMonth(dataFile: String) {
+    val conf = new SparkConf().setAppName("Frac by Month")
+    val sc = new SparkContext(conf)
+
+    val dataRDD = sc.textFile(dataFile)
+    val entries = dataRDD.map(line => lineToEntry(line, collegeHeaderMap)).cache()
+
+    val monthCount = entries
+      .filter(entry => entry.manner ==  "3")    
+      .map(entry => (entry.monthOfDeath, 1))
+      .reduceByKey((a,b) => a + b)
+      .sortByKey()
+
+    val dayCount = entries
+      .filter(entry => entry.manner == "3" )    
+      .map(entry => (entry.dayOfWeek, 1))
+      .reduceByKey((a,b) => a + b)
+      .sortByKey()
+
+      println("Month")
+      monthCount.collect().foreach{case (month, count) =>
+        println("%d, %d".format(month,count))}
+
+      println("days")
+      dayCount.collect().foreach{case (day, count) => 
+        println("%d, %d".format(day, count))}
   }
 
   def main(args: Array[String]) {
@@ -179,7 +253,17 @@ object CorrelationCollege {
     val featureFile: String = args(1)
 
     //conditionalProbability(dataFile, featureFile, "0")
-    conditionalProbability(dataFile, featureFile, "1", -1)
-   //fracByCause(dataFile, featureFile, -1, 39)
+    //conditionalProbability(dataFile, featureFile, "1", -1)
+
+    //val conf = new SparkConf().setAppName("Count by cause bin %d".format(binSize))
+    //val sc = new SparkContext()
+
+    //for (i <- 5 to 12) {
+      //val year = 2000 + i
+      //countByCause(dataFile, -1, 113, sc)
+    //}
+
+
+   countByDayMonth(dataFile)
   }
 }
